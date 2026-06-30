@@ -886,16 +886,7 @@ function renderSidebar() {
     }
   }
 
-  html += `
-    <div class="sb-section-label" style="margin-top:24px;">Admin</div>
-    <div class="sb-item" onclick="openAdmin()" style="background:rgba(243,115,53,0.1);border-left:3px solid var(--orange);">
-      <div class="sb-dot" style="background:var(--orange);color:#fff;font-size:16px;">⚙️</div>
-      <div class="sb-item-info">
-        <div class="sb-item-title" style="color:var(--orange);">Admin Portal</div>
-        <div class="sb-item-sub">Edit course content</div>
-      </div>
-    </div>
-  </nav>`;
+  html += `</nav>`;
   document.getElementById('sidebar').innerHTML = html;
 }
 
@@ -1467,7 +1458,81 @@ function markDone(idx) { completed.add(idx); renderSidebar(); alert('🎉 Congra
 // ════════════════════════════════════════════════════════════════
 // V1 ADMIN PANEL — unchanged
 // ════════════════════════════════════════════════════════════════
-function openAdmin() { buildAdminPanel(); document.getElementById('admin-panel').classList.add('open'); }
+// ── ADMIN AUTHENTICATION ──────────────────────────────────────
+const ADMIN_EMAIL = '18startup.com@gmail.com';
+const ADMIN_PASSWORD = 'VSL@18startup';
+
+function isAdminLoggedIn() {
+  return sessionStorage.getItem('adminLoggedIn') === 'true';
+}
+
+function adminLogin(email, password) {
+  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    sessionStorage.setItem('adminLoggedIn', 'true');
+    return true;
+  }
+  return false;
+}
+
+function adminLogout() {
+  sessionStorage.removeItem('adminLoggedIn');
+  location.hash = '';
+  location.reload();
+}
+
+function showAdminLoginForm() {
+  const html = `
+    <div id="admin-login-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+      <div style="background: white; padding: 40px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,.3);">
+        <h2 style="margin-bottom: 8px; color: #1A1A1A; font-size: 24px; font-weight: 700;">Admin Portal</h2>
+        <p style="color: #888; margin-bottom: 24px; font-size: 14px;">Enter credentials to continue</p>
+        
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 12px; font-weight: 700; color: #494949; margin-bottom: 6px;">Email</label>
+          <input id="admin-email" type="email" placeholder="admin@example.com" style="width: 100%; padding: 10px; border: 1px solid #E8E8E8; border-radius: 8px; font-size: 14px; font-family: inherit;">
+        </div>
+        
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; font-size: 12px; font-weight: 700; color: #494949; margin-bottom: 6px;">Password</label>
+          <input id="admin-password" type="password" placeholder="••••••••" style="width: 100%; padding: 10px; border: 1px solid #E8E8E8; border-radius: 8px; font-size: 14px; font-family: inherit;">
+        </div>
+        
+        <button onclick="handleAdminLogin()" style="width: 100%; padding: 12px; background: #F37335; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; margin-bottom: 12px;">Login</button>
+        
+        <button onclick="location.hash = ''" style="width: 100%; padding: 12px; background: #EFEFEF; color: #494949; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;">Cancel</button>
+        
+        <p id="admin-error" style="color: #E55050; font-size: 12px; margin-top: 12px; display: none;"></p>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('admin-email').focus();
+}
+
+function handleAdminLogin() {
+  const email = document.getElementById('admin-email').value;
+  const password = document.getElementById('admin-password').value;
+  
+  if (adminLogin(email, password)) {
+    document.getElementById('admin-login-modal').remove();
+    buildAdminPanel();
+    openAdmin();
+  } else {
+    document.getElementById('admin-error').textContent = 'Invalid credentials. Try again.';
+    document.getElementById('admin-error').style.display = 'block';
+    document.getElementById('admin-password').value = '';
+    document.getElementById('admin-password').focus();
+  }
+}
+
+function openAdmin() { 
+  if (!isAdminLoggedIn()) {
+    showAdminLoginForm();
+  } else {
+    buildAdminPanel(); 
+    document.getElementById('admin-panel').classList.add('open'); 
+  }
+}
 function closeAdmin() { document.getElementById('admin-panel').classList.remove('open'); }
 document.getElementById('admin-panel').addEventListener('click', e => { if (e.target === document.getElementById('admin-panel')) closeAdmin(); });
 
@@ -1476,6 +1541,25 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && e.key === 'A') {
     e.preventDefault();
     openAdmin();
+  }
+});
+
+// Open admin panel via URL hash (#admin)
+window.addEventListener('hashchange', () => {
+  if (window.location.hash === '#admin') {
+    openAdmin();
+  } else if (window.location.hash === '') {
+    // Close admin when hash is removed
+    if (document.getElementById('admin-panel')) {
+      document.getElementById('admin-panel').classList.remove('open');
+    }
+  }
+});
+
+// Check on page load if #admin is in URL
+window.addEventListener('load', () => {
+  if (window.location.hash === '#admin') {
+    setTimeout(openAdmin, 500);
   }
 });
 
